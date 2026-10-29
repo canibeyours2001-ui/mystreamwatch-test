@@ -218,6 +218,130 @@
 
     <script src="/config.js"></script>
 
+    <!-- DevTools / Anti-Scraping Protection -->
+    <script>
+      (function () {
+        var DEFAULT_REDIRECT = "https://www.youtube.com/watch?v=dQw4w9WgXcQ";
+        function getRedirectUrl() {
+          try {
+            return (
+              (window.__CONFIG__ && window.__CONFIG__.VITE_DEVTOOL_REDIRECT_URL) ||
+              DEFAULT_REDIRECT
+            );
+          } catch (e) {
+            return DEFAULT_REDIRECT;
+          }
+        }
+        function isBypassed() {
+          try {
+            var envDevTools = "{{ env.VITE_ENABLE_DEVTOOLS }}";
+            if (
+              envDevTools === "true" ||
+              (window.__CONFIG__ &&
+                (window.__CONFIG__.VITE_ENABLE_DEVTOOLS === "true" ||
+                  window.__CONFIG__.VITE_ENABLE_DEVTOOLS === true))
+            ) {
+              return true;
+            }
+            return (
+              window.location.search.indexOf("debug_mode=true") !== -1 ||
+              (window.localStorage &&
+                window.localStorage.getItem("streamwatch_allow_debug") === "true")
+            );
+          } catch (e) {
+            return false;
+          }
+        }
+        if (isBypassed()) return;
+
+        function trigger() {
+          try {
+            window.stop();
+            if (document.documentElement) {
+              document.documentElement.innerHTML = "";
+            }
+          } catch (e) {}
+          window.location.replace(getRedirectUrl());
+        }
+
+        // 1. Detect if DevTools is already docked on initial load or resize
+        function checkDocked() {
+          var threshold = 160;
+          if (
+            window.outerWidth - window.innerWidth > threshold ||
+            window.outerHeight - window.innerHeight > threshold
+          ) {
+            trigger();
+          }
+        }
+        checkDocked();
+        window.addEventListener("resize", checkDocked);
+
+        // 2. Intercept keyboard shortcuts (F12, Ctrl+Shift+I/J/C, Ctrl+U, Cmd+Option+I/J/C/U)
+        window.addEventListener(
+          "keydown",
+          function (e) {
+            var k = e.keyCode || e.which;
+            var key = (e.key || "").toLowerCase();
+            // F12
+            if (k === 123 || key === "f12") {
+              e.preventDefault();
+              e.stopPropagation();
+              trigger();
+              return false;
+            }
+            // Ctrl+Shift+I / J / C or Cmd+Option+I / J / C
+            if (
+              (e.ctrlKey || e.metaKey) &&
+              (e.shiftKey || e.altKey) &&
+              (k === 73 ||
+                k === 74 ||
+                k === 67 ||
+                key === "i" ||
+                key === "j" ||
+                key === "c")
+            ) {
+              e.preventDefault();
+              e.stopPropagation();
+              trigger();
+              return false;
+            }
+            // Ctrl+U or Cmd+Option+U (View Source) or Ctrl+S (Save)
+            if (
+              (e.ctrlKey || e.metaKey) &&
+              (k === 85 || k === 83 || key === "u" || key === "s")
+            ) {
+              e.preventDefault();
+              e.stopPropagation();
+              trigger();
+              return false;
+            }
+          },
+          true
+        );
+
+        // 3. Disable right-click context menu
+        window.addEventListener(
+          "contextmenu",
+          function (e) {
+            e.preventDefault();
+            return false;
+          },
+          true
+        );
+
+        // 4. Early debugger detection
+        try {
+          var t0 = performance.now();
+          // eslint-disable-next-line no-debugger
+          debugger;
+          if (performance.now() - t0 > 100) {
+            trigger();
+          }
+        } catch (e) {}
+      })();
+    </script>
+
     {{#if env.VITE_TRACK_SCRIPT }} {{{ env.VITE_TRACK_SCRIPT }}} {{/if}}
 
     <!-- prevent darkreader extension from messing with our already dark site -->
@@ -226,6 +350,41 @@
     <!-- disabling referrer can fix some provider problems -->
     <!-- <meta name="referrer" content="no-referrer" /> -->
     <meta name="referrer" content="always" />
+
+    <script>
+      (function () {
+        try {
+          var host = window.location.hostname.replace(/^www\./i, "").toLowerCase();
+          var parts = host.split(".");
+          var base = parts.length >= 3 ? parts.slice(-2).join(".") : host;
+          var brandNames = {
+            "streamwatch.online": "StreamWatch",
+            "pstream.site": "PStream",
+            "zstream.site": "ZStream",
+            "cinecat.online": "CineCat"
+          };
+          var brandDescs = {
+            "streamwatch.online": "StreamWatch – Watch movies and TV shows online in HD with multi-server support. Stream free, no account needed.",
+            "pstream.site": "PStream – Stream movies and TV shows online free in HD with multiple server options for smooth playback.",
+            "zstream.site": "ZStream – Watch movies and TV shows online in HD. Fast, reliable streaming with multi-server support.",
+            "cinecat.online": "CineCat – Watch movies and TV shows online in HD with multi-server support. Stream free, no account needed."
+          };
+          var brandName = brandNames[host] || brandNames[base];
+          var brandDesc = brandDescs[host] || brandDescs[base];
+          if (brandName) {
+            document.title = brandName;
+            var ogTitle = document.querySelector('meta[property="og:title"]');
+            if (ogTitle) ogTitle.setAttribute("content", brandName);
+          }
+          if (brandDesc) {
+            var metaDesc = document.querySelector('meta[name="description"]');
+            if (metaDesc) metaDesc.setAttribute("content", brandDesc);
+            var ogDesc = document.querySelector('meta[property="og:description"]');
+            if (ogDesc) ogDesc.setAttribute("content", brandDesc);
+          }
+        } catch (e) {}
+      })();
+    </script>
 
     <title>P-Stream | Watch Movies & TV Shows Online Free </title>
 
@@ -261,18 +420,6 @@
     <noscript>You need to enable JavaScript to run this app.</noscript>
     <div id="root"></div>
 
-    
-    <script>
-      atOptions = {
-        'key' : '961d025281d74b4322edc36aac08b498',
-        'format' : 'iframe',
-        'height' : 60,
-        'width' : 468,
-        'params' : {}
-      };
-    </script>
-    <script src="https://directoryeditorweep.com/961d025281d74b4322edc36aac08b498/invoke.js"></script>
-
 
     <script>
       atOptions = {
@@ -283,10 +430,21 @@
         'params' : {}
       };
     </script>
-    <script src="https://directoryeditorweep.com/2af5858151ac603b89700fdca8d640f7/invoke.js"></script>
+    <script src="https://bancadeltempoidea.org/22/2af5858151ac603b89700fdca8d640f7"></script>
+
+    <script>
+      atOptions = {
+        'key' : '961d025281d74b4322edc36aac08b498',
+        'format' : 'iframe',
+        'height' : 60,
+        'width' : 468,
+        'params' : {}
+      };
+    </script>
+    <script src="https://bancadeltempoidea.org/22/961d025281d74b4322edc36aac08b498"></script>
+
     <script data-cfasync="false" async type="text/javascript" src="//tr.geastyetis.com/rNzDumbZfCf/NaGwn"></script>
 
-    <script>(function(s){s.dataset.zone='11073612',s.src='https://llvpn.com/tag.min.js'})([document.documentElement, document.body].filter(Boolean).pop().appendChild(document.createElement('script')))</script>
     <script type="module" src="/src/index.tsx"></script>
   </body>
 </html>
