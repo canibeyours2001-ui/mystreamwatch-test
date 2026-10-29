@@ -35,9 +35,12 @@ function parseParams(input: string): Record<string, string> {
 }
 
 export function getParsedUrls() {
-  const urls = useAuthStore.getState().proxySet ?? originalUrls;
+  const configuredUrls = useAuthStore.getState().proxySet ?? originalUrls;
+  const urls = Array.isArray(configuredUrls) ? configuredUrls : originalUrls;
   const output: ParsedUrl[] = [];
   urls.forEach((url) => {
+    // Ignore malformed values restored from older or edited local settings.
+    if (typeof url !== "string" || !url.trim()) return;
     if (!url.startsWith("|")) {
       if (canParseUrl(url)) {
         output.push({
