@@ -1,6 +1,7 @@
 import {
   Fetcher,
   makeSimpleProxyFetcher,
+  makeStandardFetcher,
   setM3U8ProxyUrl,
 } from "@p-stream/providers";
 
@@ -75,9 +76,17 @@ export function setupM3U8Proxy() {
 }
 
 export function makeLoadBalancedSimpleProxyFetcher() {
+  // A self-hosted instance may have no proxy configured. Passing undefined to
+  // makeSimpleProxyFetcher causes a TypeError in the URL parser. Requests to
+  // CORS-enabled sources can still succeed without a proxy.
+  const directFetcher = makeStandardFetcher(fetchButWithApiTokens);
   const fetcher: Fetcher = async (a, b) => {
+    const proxyUrl = getLoadbalancedProxyUrl();
+    if (!proxyUrl) {
+      return directFetcher(a, b);
+    }
     const currentFetcher = makeSimpleProxyFetcher(
-      getLoadbalancedProxyUrl(),
+      proxyUrl,
       fetchButWithApiTokens,
     );
     return currentFetcher(a, b);
